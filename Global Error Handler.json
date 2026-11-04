@@ -1,0 +1,138 @@
+{
+  "name": "Global Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Global Error Handler\nSet this workflow as the **Error workflow** in the settings of every other workflow.\n\nAny failed execution is turned into one structured incident record, posted to the ops channel and appended to an error log, so failures are never silent and can be trended by the Automation Performance and ROI Monitor.\n\nEnable the Slack / Sheets nodes after adding credentials.",
+        "height": 300,
+        "width": 460
+      },
+      "id": "9453eef6-6259-5ff9-8a94-46116efe7db9",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -396.00000000000006
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1b3f5e14-1631-540a-961c-6d9d03d0ff45",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn n8n's error payload into one flat, loggable incident record.\nreturn $input.all().map(({ json }) => {\n  const execution = json.execution ?? {};\n  const error = execution.error ?? json.trigger?.error ?? {};\n  return {\n    json: {\n      occurred_at: new Date().toISOString(),\n      workflow: json.workflow?.name ?? 'unknown workflow',\n      workflow_id: json.workflow?.id ?? null,\n      execution_id: execution.id ?? null,\n      execution_url: execution.url ?? null,\n      failed_node: execution.lastNodeExecuted ?? error.node?.name ?? 'unknown',\n      mode: execution.mode ?? 'unknown',\n      message: String(error.message ?? 'No error message').slice(0, 500),\n    },\n  };\n});\n"
+      },
+      "id": "43807d46-53b3-5a17-840a-ce5405d10a6d",
+      "name": "Format Incident",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#automation-ops",
+          "mode": "name"
+        },
+        "text": "=:warning: *{{ $json.workflow }}* failed at node *{{ $json.failed_node }}*\n{{ $json.message }}\n{{ $json.execution_url ?? '' }}",
+        "otherOptions": {}
+      },
+      "id": "7005c4c6-0bb7-5eed-8bda-484b78f2d804",
+      "name": "Alert Ops Channel",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -108.0
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "error_log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "bcfb9078-b0da-579b-8288-bd7603c98d2d",
+      "name": "Append to Error Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        108.0
+      ],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Incident": {
+      "main": [
+        [
+          {
+            "node": "Alert Ops Channel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append to Error Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "ops"
+    },
+    {
+      "name": "reliability"
+    }
+  ]
+}

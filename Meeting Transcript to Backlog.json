@@ -1,0 +1,1198 @@
+{
+  "name": "Meeting Transcript to Backlog",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Meeting Transcript to Backlog\nDiscovery-meeting transcripts in a Google Drive folder become requirements, user stories with Given/When/Then acceptance criteria, Jira stories, a proposed solution and a priority, mirrored in a Google Sheet.\n\nAgents in sequence: **Requirements Analyst → Business Analyst → Solution Architect → Project Manager**, each with a structured output parser.\n\n**Setup:** select your Google Drive, Docs, Sheets, Jira and OpenAI credentials, replace the `YOUR_...` ids, and add `Proposed Solution` and `Priority` columns to the `US & AC` sheet.\n\n**Known limitation:** re-running reprocesses every file in the folder (see README.md).",
+        "height": 380,
+        "width": 600
+      },
+      "id": "370e6b90-4208-5a50-a5d3-42909391d15d",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        -620
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -160
+      ],
+      "id": "1cbca8b4-8361-5428-b92b-3edb2f62ede3",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -336,
+        -160
+      ],
+      "id": "816d2d9c-33b5-5ca6-a881-25940f9c4583",
+      "name": "Search files and folders"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -160
+      ],
+      "id": "9aec27ab-feca-5be6-bd85-458376ec967e",
+      "name": "Get a document"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f16db21-4619-4756-b789-7f778855f558",
+              "name": "limit",
+              "value": "5",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        32,
+        -160
+      ],
+      "id": "7f6b71b2-6a14-547c-8bf4-8522353823dd",
+      "name": "set Limits"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "d43feb26-9d04-570d-9e7b-04f02a4cb478",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"requirements\": [\n    \"The system must allow administrators to export user data as a CSV file.\",\n    \"Users need the ability to reset their password via a secure email link.\",\n    \"The page load time for the dashboard should not exceed 2 seconds.\",\n    \"The application must comply with GDPR standards for data privacy.\",\n    \"The customer wants to see the order status displayed clearly on the order history page.\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "ff2c8e95-e3f2-5397-97f9-bbcde0a27194",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.requirements",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -160
+      ],
+      "id": "49d2097f-84a1-5e9d-bd89-401e6dec9afc",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "requirements",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Last Modified Date": "=  {{ $now.format('dd/MM/yyyy hh:ss ') }}",
+            "Source Meeting": "={{ $('Search files and folders').item.json.id }} - {{ $('Search files and folders').item.json.name }}",
+            "Requirement": "={{ $json.output.requirements }}",
+            "Status": "New"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Requirement",
+              "displayName": "Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Modified Date",
+              "displayName": "Last Modified Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source Meeting",
+              "displayName": "Source Meeting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        -160
+      ],
+      "id": "215a6d6d-7d35-5e10-8605-24a656b86a37",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the requirement that you need to turn into user story + acceptance criteria:\n\n {{ $json.Requirement }}\n\nPass through the requirement into the json object as the value;",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert AI Product Manager/Business Analyst. You will be given exactly ONE already-extracted requirement. Your sole responsibility is to transform that single requirement into one well-structured, actionable user story and its acceptance criteria (ACs).\n\n### Input\n\nThe input is a single requirement statement, not a transcript. Do not look for multiple requirements and do not invent additional ones.\n\n### Output Requirements and Format\n\nOutput the result as a JSON array containing exactly ONE object with:\n- `value`\n- `requirement`\n- `acceptance_criteria`\n\nThe `value` field is the requirement statement, passed through as given.\n\nThe `requirement` field must contain a `user_story`.\n\n### 255 CHARACTER LIMIT\n\nThe `value` field MUST NOT exceed 255 characters, including spaces and punctuation.\n\nThe `user_story` field MUST NOT exceed 255 characters, including spaces and punctuation.\n\nThis is a HARD LIMIT. Before returning the JSON, verify the character count of `value` and `user_story`. If either exceeds 255 characters, rewrite it concisely while preserving its original meaning. Do NOT truncate blindly, and do NOT remove important business meaning, constraints, numbers, or conditions just to satisfy the limit.\n\nAcceptance criteria are NOT subject to the 255-character limit.\n\n### User Story\n\nThe `user_story` must follow this structure:\n\n\"As a [Specific User Role], I want [action/feature], So that [business value/outcome].\"\n\nUse the most appropriate user or stakeholder role implied by the requirement. Keep the complete user story within 255 characters.\n\n### Acceptance Criteria\n\nThe `acceptance_criteria` field must be a single string containing all acceptance criteria.\n\nEach criterion must follow:\n\nAC1: Given [Context], When [Action], Then [Result]\n\nAC2: Given [Context], When [Action], Then [Result]\n\nAC3: Given [Context], When [Action], Then [Result]\n\nSeparate acceptance criteria using `\\n`.\n\nAcceptance criteria must describe the actual behavior of the requirement. Do not create acceptance criteria about JSON formatting, JSON fields, prompt instructions, or output generation.\n\n### Mandatory JSON Structure\n\nSTRICTLY adhere to this structure (a JSON array with exactly one object):\n\n[\n  {\n    \"value\": \"The requirement statement, unchanged.\",\n    \"requirement\": {\n      \"user_story\": \"As a [role], I want [action], So that [outcome].\"\n    },\n    \"acceptance_criteria\": \"AC1: ...\\nAC2: ...\\nAC3: ...\"\n  }\n]\n\n### Final Validation\n\nBefore returning the response, verify ALL of the following:\n\n1. The response is valid JSON.\n2. The response is a JSON array with exactly one element.\n3. The element contains exactly `value`, `requirement`, `acceptance_criteria`.\n4. `requirement` contains exactly `user_story`.\n5. `value` is 255 characters or fewer.\n6. `user_story` is 255 characters or fewer.\n7. Acceptance criteria are separated by `\\n`.\n8. No prompt instructions were interpreted as requirement content.\n9. Return ONLY the JSON array."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -624,
+        176
+      ],
+      "id": "e30d59ff-945e-5db0-bb16-5f73e7e8ec7c",
+      "name": "Business Analyst"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the transcript of the discovery meeting :\n\n{{ $('Get a document').item.json.content }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an expert AI Requirements Analyst. Your sole responsibility is to analyze a discovery meeting transcript and extract every distinct functional, non-functional, or business requirement discussed.\n\nYour goal is to identify and articulate each unique requirement clearly, without transformation into a User Story format.\n\n### Input\n\nThe input will be the plain text transcript of a discovery or requirements gathering meeting. The transcript is raw, and you must synthesize the core needs, pain points, and desired outcomes into formal, standalone requirement statements.\n\n### Output Requirements and Format\n\nYou must identify each distinct requirement and output the entire result as a single JSON array of strings. Each string in the array must represent one complete, self-contained requirement.\n\nOUTPUT LIMIT IS {{ $json.limit }} REQUIREMENTS\n\nPREFIX EACH REQUIREMENT WITH A NUMBER i.e. 1, 2, 3, 4, etc.\n\n**STRICTLY adhere to this mandatory JSON output structure:**\n\n```json\n{\n  \"requirements\": [\n    \"The system must allow administrators to export user data as a CSV file.\",\n    \"Users need the ability to reset their password via a secure email link.\",\n    \"The page load time for the dashboard should not exceed 2 seconds.\",\n    \"The application must comply with GDPR standards for data privacy.\",\n    \"The customer wants to see the order status displayed clearly on the order history page.\"\n  ]\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        272,
+        -304
+      ],
+      "id": "73954c5d-bfff-52da-be27-ea4e39e4785c",
+      "name": "Extract Requirements"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        336
+      ],
+      "id": "234d919e-ebe0-59f2-8f31-b088459e0904",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "[\n  {\n    \"value\": \"Requirement 1: User Login Feature\",\n    \"requirement\": {\n      \"user_story\": \"As a [Specific User Role, e.g., System Administrator, Customer, Marketing Manager], I want [The action/feature to be performed], So that [The business value or desired outcome].\"\n    },\n    \"acceptance_criteria\": \"AC1: Given [Context], When [Action], Then [Result]\\nAC2: Given [Context], When [Action], Then [Result]\\nAC3: Given [Context], When [Action], Then [Result]\"\n  },\n  {\n    \"value\": \"Requirement 2: Profile Update Feature\",\n    \"requirement\": {\n      \"user_story\": \"As a [Specific User Role, e.g., System Administrator, Customer, Marketing Manager], I want [The action/feature to be performed], So that [The business value or desired outcome].\"\n    },\n    \"acceptance_criteria\": \"AC1: Given [Context], When [Action], Then [Result]\\nAC2: Given [Context], When [Action], Then [Result]\\nAC3: Given [Context], When [Action], Then [Result]\"\n  }\n]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -464,
+        384
+      ],
+      "id": "73ac7314-d748-5866-be04-a2b8d520ef96",
+      "name": "Add US + ACs"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "YOUR_JIRA_PROJECT_ID",
+          "mode": "id"
+        },
+        "issueType": {
+          "__rl": true,
+          "value": "YOUR_JIRA_ISSUE_TYPE_ID",
+          "mode": "id"
+        },
+        "summary": "={{ $json.Requirement }}",
+        "additionalFields": {
+          "description": "=User Story :\n{{ $json[\"User Story\"] }}\n\nAcceptance Criteria:\n{{ $json[\"Acceptance Criteria\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        128,
+        176
+      ],
+      "id": "69ba0344-59d5-5522-a54e-172c09107278",
+      "name": "Create Jira Tickets"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "US & AC",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "User Story": "={{ $json.output[0].requirement.user_story }}",
+            "Requirement": "={{ $json.output[0].value }}",
+            "Acceptance Criteria": "={{ $json.output[0].acceptance_criteria }}",
+            "Status": "=New",
+            "Last Modified Date": "={{ $now.format('dd/MM/yyyy HH:mm') }}"
+          },
+          "matchingColumns": [
+            "Requirement"
+          ],
+          "schema": [
+            {
+              "id": "Requirement",
+              "displayName": "Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User Story",
+              "displayName": "User Story",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Acceptance Criteria",
+              "displayName": "Acceptance Criteria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Modified Date",
+              "displayName": "Last Modified Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -256,
+        176
+      ],
+      "id": "c18b1518-f151-54cb-a185-a2278d4c8069",
+      "name": "Append or update row in sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "028a661c-89fe-467e-91b1-da3003c33876",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "New",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -80,
+        176
+      ],
+      "id": "0e047072-9d6b-56fc-a0f1-16e51d2cfb32",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "requirements",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Requirement": "={{ $('Append row in sheet').item.json.Requirement }}",
+            "Status": "Published"
+          },
+          "matchingColumns": [
+            "Requirement"
+          ],
+          "schema": [
+            {
+              "id": "Requirement",
+              "displayName": "Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Modified Date",
+              "displayName": "Last Modified Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Source Meeting",
+              "displayName": "Source Meeting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        336,
+        176
+      ],
+      "id": "26b11606-7bc7-5678-917e-7a13f8e22dc9",
+      "name": "Change to Published"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        784
+      ],
+      "id": "26fa2723-cff9-54c1-ac63-3801cae4cf49",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"proposed_solution\": \"A concise, actionable technical implementation approach for this requirement, referencing the user story and acceptance criteria.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        768
+      ],
+      "id": "5f6230c6-acd1-5713-9389-bda6c813a45c",
+      "name": "Proposed solution output"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "additionalFields": {},
+        "issueKey": "={{ $('Create Jira Tickets').item.json.key }}"
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        160,
+        560
+      ],
+      "id": "11998cbc-67a1-5bb9-9eca-b409ee565dc7",
+      "name": "Get an issue"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "updateFields": {
+          "description": "=User Story:\n{{ $('Append or update row in sheet').item.json['User Story'] }}\n\nAcceptance Criteria:\n{{ $('Append or update row in sheet').item.json['Acceptance Criteria'] }}\n\nProposed Solution:\n{{ $('Solution Architect').item.json.output.proposed_solution }}"
+        },
+        "issueKey": "={{ $('Create Jira Tickets').item.json.key }}"
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        368,
+        560
+      ],
+      "id": "e155b4a4-e1e1-5ed5-8276-528d5163f5ca",
+      "name": "Update an issue"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "US & AC",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Requirement": "={{ $('Append or update row in sheet').item.json.Requirement }}",
+            "Proposed Solution": "={{ $('Solution Architect').item.json.output.proposed_solution }}",
+            "Status": "=Solution Proposed",
+            "Last Modified Date": "={{ $now.format('dd/MM/yyyy HH:mm') }}"
+          },
+          "matchingColumns": [
+            "Requirement"
+          ],
+          "schema": [
+            {
+              "id": "Requirement",
+              "displayName": "Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User Story",
+              "displayName": "User Story",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Acceptance Criteria",
+              "displayName": "Acceptance Criteria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Modified Date",
+              "displayName": "Last Modified Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Proposed Solution",
+              "displayName": "Proposed Solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        560
+      ],
+      "id": "c6ba2111-0657-585e-a568-4323313c9347",
+      "name": "Update Proposed Solution"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "additionalFields": {},
+        "issueKey": "={{ $('Create Jira Tickets').item.json.key }}"
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        784,
+        560
+      ],
+      "id": "475b07ab-f1ad-5d8e-bd08-5134bf0e535c",
+      "name": "Get an issue1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        768
+      ],
+      "id": "5614d863-1b90-5759-80b6-16d514468630",
+      "name": "OpenAI Chat Model3"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"priority\": \"Medium\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        768
+      ],
+      "id": "a9728eb6-5003-5047-b795-d5b9e8fa244f",
+      "name": "Priority Output"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "updateFields": {
+          "priority": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.output.priority }}"
+          }
+        },
+        "issueKey": "={{ $('Create Jira Tickets').item.json.key }}"
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        560
+      ],
+      "id": "56dbf944-39f3-5a12-81ba-f12c13aff963",
+      "name": "Update Priority in Jira"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the requirement, user story, and acceptance criteria you need to create a proposed technical solution for in Jira:\n\nIssue Key: {{ $('Create Jira Tickets').item.json.key }}\nRequirement: {{ $('Append or update row in sheet').item.json.Requirement }}\nUser story: {{ $('Append or update row in sheet').item.json['User Story'] }}\nAcceptance criteria: {{ $('Append or update row in sheet').item.json['Acceptance Criteria'] }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an experienced Solutions Architect. Given a requirement, its user story, and its acceptance criteria, propose a concise, actionable technical implementation approach that would satisfy every acceptance criterion.\n\nBe specific enough to be useful to an engineer picking up the ticket (mention relevant components, data flow, edge cases to handle), but keep it to a few sentences or a short bulleted list -- this is a proposed approach, not a full design document.\n\nReturn ONLY JSON matching this exact shape:\n{\n  \"proposed_solution\": \"...\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -192,
+        560
+      ],
+      "id": "b0ad9038-eb34-5c58-b91f-8d83bfccab9b",
+      "name": "Solution Architect"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an experienced technical Project Manager. Given a requirement, its user story, acceptance criteria, and a proposed technical solution, decide the priority this Jira issue should be assigned.\n\nUse exactly one of these Jira priority names: Highest, High, Medium, Low, Lowest.\n\nBase the priority on: the business/user impact described in the requirement, urgency implied by the acceptance criteria, and the complexity/risk implied by the proposed solution.\n\nReturn ONLY JSON matching this exact shape:\n{\n  \"priority\": \"Medium\"\n}"
+        },
+        "promptType": "define",
+        "text": "=Here is the requirement, user story, acceptance criteria, and proposed technical solution for this Jira issue. Determine the priority this issue should be assigned.\n\nIssue Key: {{ $('Create Jira Tickets').item.json.key }}\nRequirement: {{ $('Append or update row in sheet').item.json.Requirement }}\nUser story: {{ $('Append or update row in sheet').item.json['User Story'] }}\nAcceptance criteria: {{ $('Append or update row in sheet').item.json['Acceptance Criteria'] }}\nProposed solution: {{ $('Solution Architect').item.json.output.proposed_solution }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        992,
+        560
+      ],
+      "id": "a14ff48c-0cc2-570e-853c-0d358161aa9d",
+      "name": "Project Manager"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "US & AC",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Requirement": "={{ $('Append or update row in sheet').item.json.Requirement }}",
+            "Priority": "={{ $json.output.priority }}",
+            "Status": "=Prioritized",
+            "Last Modified Date": "={{ $now.format('dd/MM/yyyy HH:mm') }}"
+          },
+          "matchingColumns": [
+            "Requirement"
+          ],
+          "schema": [
+            {
+              "id": "Requirement",
+              "displayName": "Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User Story",
+              "displayName": "User Story",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Acceptance Criteria",
+              "displayName": "Acceptance Criteria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Modified Date",
+              "displayName": "Last Modified Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Proposed Solution",
+              "displayName": "Proposed Solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1560,
+        560
+      ],
+      "id": "182b8666-21ae-5e6f-9eea-7e18afe888e1",
+      "name": "Update Priority in Sheet"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Get a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a document": {
+      "main": [
+        [
+          {
+            "node": "set Limits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set Limits": {
+      "main": [
+        [
+          {
+            "node": "Extract Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Requirements",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Requirements",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Business Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Requirements": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Business Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Analyst": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add US + ACs": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Business Analyst",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Create Jira Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Jira Tickets": {
+      "main": [
+        [
+          {
+            "node": "Change to Published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Change to Published": {
+      "main": [
+        [
+          {
+            "node": "Solution Architect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Solution Architect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposed solution output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Solution Architect",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an issue": {
+      "main": [
+        [
+          {
+            "node": "Update an issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an issue": {
+      "main": [
+        [
+          {
+            "node": "Update Proposed Solution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Proposed Solution": {
+      "main": [
+        [
+          {
+            "node": "Get an issue1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an issue1": {
+      "main": [
+        [
+          {
+            "node": "Project Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Project Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Priority Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Project Manager",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solution Architect": {
+      "main": [
+        [
+          {
+            "node": "Get an issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Manager": {
+      "main": [
+        [
+          {
+            "node": "Update Priority in Jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Priority in Jira": {
+      "main": [
+        [
+          {
+            "node": "Update Priority in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "requirements"
+    },
+    {
+      "name": "agents"
+    },
+    {
+      "name": "jira"
+    }
+  ]
+}

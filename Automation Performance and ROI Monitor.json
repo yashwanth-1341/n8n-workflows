@@ -1,0 +1,365 @@
+{
+  "name": "Automation Performance and ROI Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Automation Performance and ROI Monitor\nDaily health and value check for all automations.\n\n- **Reliability:** success rate vs. SLO\n- **Performance:** latency spikes (z-score vs. 7-day baseline)\n- **Adoption:** volume drops\n- **Value:** estimated hours saved and LLM cost per workflow\n\nStatistics are computed in code; the LLM only writes the human-readable note, and only when something is off.\n\n**Demo:** `Fetch n8n Executions` is disabled, so the embedded synthetic metrics are used. **Live:** enable it and add an n8n API key (header `X-N8N-API-KEY`).",
+        "height": 400,
+        "width": 620
+      },
+      "id": "cdbb96da-8c6c-54b6-87db-27c8f9a0c1e8",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -612
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "005e85bd-0fec-54f1-9f9d-ad94a657dc9c",
+      "name": "Every Morning 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -144
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "33a0059d-d8da-52e0-ae5f-9953253feb36",
+      "name": "Run Demo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR-N8N-HOST/api/v1/executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "250"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "05ca9a05-e06e-58c9-97c7-56d897c0c0d4",
+      "name": "Fetch n8n Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Two input modes:\n//  - Live: the n8n public API response from \"Fetch n8n Executions\" ({ data: [...] }).\n//  - Demo: that node is disabled, so we fall back to the embedded synthetic dataset.\n// Output: one row per workflow and day.\nconst SAMPLE = [{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-21\",\"runs\":40,\"failures\":1,\"avg_duration_s\":9.5,\"items_processed\":120,\"llm_tokens\":108000},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-22\",\"runs\":44,\"failures\":0,\"avg_duration_s\":9.3,\"items_processed\":134,\"llm_tokens\":120600},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-23\",\"runs\":42,\"failures\":0,\"avg_duration_s\":8.9,\"items_processed\":127,\"llm_tokens\":114300},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-24\",\"runs\":37,\"failures\":0,\"avg_duration_s\":8.5,\"items_processed\":110,\"llm_tokens\":99000},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-25\",\"runs\":36,\"failures\":0,\"avg_duration_s\":8.5,\"items_processed\":107,\"llm_tokens\":96300},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-26\",\"runs\":41,\"failures\":1,\"avg_duration_s\":8.9,\"items_processed\":123,\"llm_tokens\":110700},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-27\",\"runs\":44,\"failures\":0,\"avg_duration_s\":9.3,\"items_processed\":134,\"llm_tokens\":120600},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-28\",\"runs\":41,\"failures\":0,\"avg_duration_s\":9.5,\"items_processed\":125,\"llm_tokens\":112500},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-29\",\"runs\":37,\"failures\":0,\"avg_duration_s\":9.3,\"items_processed\":108,\"llm_tokens\":97200},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-30\",\"runs\":37,\"failures\":0,\"avg_duration_s\":8.9,\"items_processed\":109,\"llm_tokens\":98100},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-10-31\",\"runs\":42,\"failures\":1,\"avg_duration_s\":8.5,\"items_processed\":126,\"llm_tokens\":113400},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-11-01\",\"runs\":44,\"failures\":0,\"avg_duration_s\":8.5,\"items_processed\":134,\"llm_tokens\":120600},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-11-02\",\"runs\":40,\"failures\":0,\"avg_duration_s\":8.9,\"items_processed\":122,\"llm_tokens\":109800},{\"workflow\":\"Customer Feedback Intelligence\",\"date\":\"2026-11-03\",\"runs\":36,\"failures\":0,\"avg_duration_s\":31.4,\"items_processed\":107,\"llm_tokens\":96300},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-21\",\"runs\":66,\"failures\":0,\"avg_duration_s\":14.5,\"items_processed\":67,\"llm_tokens\":120600},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-22\",\"runs\":63,\"failures\":0,\"avg_duration_s\":13.8,\"items_processed\":64,\"llm_tokens\":115200},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-23\",\"runs\":56,\"failures\":0,\"avg_duration_s\":13.2,\"items_processed\":55,\"llm_tokens\":99000},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-24\",\"runs\":55,\"failures\":0,\"avg_duration_s\":13.2,\"items_processed\":54,\"llm_tokens\":97200},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-25\",\"runs\":61,\"failures\":1,\"avg_duration_s\":13.8,\"items_processed\":62,\"llm_tokens\":111600},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-26\",\"runs\":66,\"failures\":0,\"avg_duration_s\":14.5,\"items_processed\":67,\"llm_tokens\":120600},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-27\",\"runs\":62,\"failures\":0,\"avg_duration_s\":14.8,\"items_processed\":62,\"llm_tokens\":111600},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-28\",\"runs\":55,\"failures\":0,\"avg_duration_s\":14.5,\"items_processed\":54,\"llm_tokens\":97200},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-29\",\"runs\":55,\"failures\":0,\"avg_duration_s\":13.8,\"items_processed\":55,\"llm_tokens\":99000},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-30\",\"runs\":63,\"failures\":1,\"avg_duration_s\":13.2,\"items_processed\":63,\"llm_tokens\":113400},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-10-31\",\"runs\":66,\"failures\":0,\"avg_duration_s\":13.3,\"items_processed\":67,\"llm_tokens\":120600},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-11-01\",\"runs\":61,\"failures\":0,\"avg_duration_s\":13.8,\"items_processed\":61,\"llm_tokens\":109800},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-11-02\",\"runs\":54,\"failures\":0,\"avg_duration_s\":14.5,\"items_processed\":53,\"llm_tokens\":95400},{\"workflow\":\"Business Process Issue Triage\",\"date\":\"2026-11-03\",\"runs\":56,\"failures\":18,\"avg_duration_s\":14.8,\"items_processed\":56,\"llm_tokens\":100800},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-21\",\"runs\":13,\"failures\":0,\"avg_duration_s\":21.7,\"items_processed\":13,\"llm_tokens\":33800},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-22\",\"runs\":11,\"failures\":0,\"avg_duration_s\":20.8,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-23\",\"runs\":11,\"failures\":0,\"avg_duration_s\":20.8,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-24\",\"runs\":12,\"failures\":1,\"avg_duration_s\":21.7,\"items_processed\":12,\"llm_tokens\":31200},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-25\",\"runs\":13,\"failures\":0,\"avg_duration_s\":22.8,\"items_processed\":13,\"llm_tokens\":33800},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-26\",\"runs\":12,\"failures\":0,\"avg_duration_s\":23.3,\"items_processed\":12,\"llm_tokens\":31200},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-27\",\"runs\":11,\"failures\":0,\"avg_duration_s\":22.8,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-28\",\"runs\":11,\"failures\":0,\"avg_duration_s\":21.7,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-29\",\"runs\":13,\"failures\":1,\"avg_duration_s\":20.8,\"items_processed\":13,\"llm_tokens\":33800},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-30\",\"runs\":13,\"failures\":0,\"avg_duration_s\":20.8,\"items_processed\":13,\"llm_tokens\":33800},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-10-31\",\"runs\":12,\"failures\":0,\"avg_duration_s\":21.7,\"items_processed\":12,\"llm_tokens\":31200},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-11-01\",\"runs\":11,\"failures\":0,\"avg_duration_s\":22.9,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-11-02\",\"runs\":11,\"failures\":0,\"avg_duration_s\":23.3,\"items_processed\":11,\"llm_tokens\":28600},{\"workflow\":\"Requirement Validation Gate\",\"date\":\"2026-11-03\",\"runs\":13,\"failures\":0,\"avg_duration_s\":22.8,\"items_processed\":13,\"llm_tokens\":33800},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-21\",\"runs\":3,\"failures\":0,\"avg_duration_s\":89.8,\"items_processed\":17,\"llm_tokens\":102000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-22\",\"runs\":3,\"failures\":0,\"avg_duration_s\":89.9,\"items_processed\":16,\"llm_tokens\":96000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-23\",\"runs\":3,\"failures\":0,\"avg_duration_s\":93.8,\"items_processed\":18,\"llm_tokens\":108000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-24\",\"runs\":3,\"failures\":0,\"avg_duration_s\":98.6,\"items_processed\":20,\"llm_tokens\":120000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-25\",\"runs\":3,\"failures\":0,\"avg_duration_s\":100.7,\"items_processed\":19,\"llm_tokens\":114000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-26\",\"runs\":3,\"failures\":0,\"avg_duration_s\":98.5,\"items_processed\":16,\"llm_tokens\":96000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-27\",\"runs\":3,\"failures\":0,\"avg_duration_s\":93.6,\"items_processed\":16,\"llm_tokens\":96000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-28\",\"runs\":3,\"failures\":0,\"avg_duration_s\":89.8,\"items_processed\":19,\"llm_tokens\":114000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-29\",\"runs\":3,\"failures\":0,\"avg_duration_s\":89.9,\"items_processed\":20,\"llm_tokens\":120000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-30\",\"runs\":3,\"failures\":0,\"avg_duration_s\":93.9,\"items_processed\":18,\"llm_tokens\":108000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-10-31\",\"runs\":3,\"failures\":0,\"avg_duration_s\":98.7,\"items_processed\":16,\"llm_tokens\":96000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-11-01\",\"runs\":3,\"failures\":0,\"avg_duration_s\":100.7,\"items_processed\":17,\"llm_tokens\":102000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-11-02\",\"runs\":3,\"failures\":0,\"avg_duration_s\":98.4,\"items_processed\":19,\"llm_tokens\":114000},{\"workflow\":\"Meeting Transcript to Backlog\",\"date\":\"2026-11-03\",\"runs\":3,\"failures\":0,\"avg_duration_s\":93.5,\"items_processed\":20,\"llm_tokens\":120000}];\nconst WORKFLOW_NAMES = {}; // optional: { '<workflowId>': 'Customer Feedback Intelligence', ... }\n\nconst executions = $input.all().flatMap((item) => (Array.isArray(item.json.data) ? item.json.data : []));\nif (executions.length === 0) return SAMPLE.map((json) => ({ json }));\n\nconst rows = {};\nfor (const e of executions) {\n  const workflow = WORKFLOW_NAMES[e.workflowId] ?? String(e.workflowId);\n  const date = String(e.startedAt).slice(0, 10);\n  const r = (rows[`${workflow}|${date}`] ??= { workflow, date, runs: 0, failures: 0, duration_total_s: 0, items_processed: 0, llm_tokens: 0 });\n  r.runs++;\n  if (e.status === 'error' || e.status === 'crashed') r.failures++;\n  if (e.stoppedAt) r.duration_total_s += (new Date(e.stoppedAt) - new Date(e.startedAt)) / 1000;\n  r.items_processed++; // one business item per execution unless your workflows log item counts\n}\nreturn Object.values(rows).map(({ duration_total_s, ...r }) => ({\n  json: { ...r, avg_duration_s: Math.round((duration_total_s / r.runs) * 10) / 10 },\n}));\n"
+      },
+      "id": "9d405f7f-1713-5265-9941-c44d552fe0fd",
+      "name": "Normalize Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG = {\n  success_rate_slo: 0.95,\n  latency_z_threshold: 2,\n  volume_drop_ratio: 0.5,\n  baseline_days: 7,\n  // ASSUMPTION: minutes a person needed per item before automation. Validate with the team before reporting.\n  manual_minutes_per_item: {\n    'Customer Feedback Intelligence': 4,\n    'Business Process Issue Triage': 12,\n    'Requirement Validation Gate': 20,\n    'Meeting Transcript to Backlog': 30,\n  },\n  default_manual_minutes: 5,\n  // ASSUMPTION: blended LLM price in EUR per 1M tokens. Set it from your model and contract.\n  llm_eur_per_million_tokens: 0.5,\n};\n\nconst mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);\nconst std = (a) => {\n  const m = mean(a);\n  return Math.sqrt(mean(a.map((x) => (x - m) ** 2)));\n};\nconst round = (x, d = 2) => Math.round(x * 10 ** d) / 10 ** d;\nconst successRate = (r) => (r.runs ? (r.runs - r.failures) / r.runs : 1);\n\nconst byWorkflow = {};\nfor (const { json } of $input.all()) (byWorkflow[json.workflow] ??= []).push(json);\n\nconst kpis = [];\nconst anomalies = [];\nfor (const [workflow, rows] of Object.entries(byWorkflow)) {\n  rows.sort((a, b) => a.date.localeCompare(b.date));\n  const current = rows[rows.length - 1];\n  const baseline = rows.slice(-1 - CONFIG.baseline_days, -1);\n  const currentSr = successRate(current);\n  const baselineSr = baseline.length ? mean(baseline.map(successRate)) : currentSr;\n  const durations = baseline.map((r) => r.avg_duration_s);\n  const durationMean = mean(durations);\n  const durationStd = Math.max(std(durations), 0.1 * durationMean, 0.01);\n  const latencyZ = baseline.length ? (current.avg_duration_s - durationMean) / durationStd : 0;\n  const baselineVolume = mean(baseline.map((r) => r.items_processed));\n  const last7 = rows.slice(-7);\n  const items7 = last7.reduce((s, r) => s + r.items_processed, 0);\n  const tokens7 = last7.reduce((s, r) => s + (r.llm_tokens || 0), 0);\n  const minutes = CONFIG.manual_minutes_per_item[workflow] ?? CONFIG.default_manual_minutes;\n\n  kpis.push({\n    workflow,\n    date: current.date,\n    runs: current.runs,\n    failures: current.failures,\n    success_rate: round(currentSr, 3),\n    baseline_success_rate: round(baselineSr, 3),\n    avg_duration_s: current.avg_duration_s,\n    baseline_avg_duration_s: round(durationMean, 1),\n    latency_z: round(latencyZ),\n    items_processed: current.items_processed,\n    items_last_7d: items7,\n    hours_saved_last_7d: round((items7 * minutes) / 60, 1),\n    llm_cost_eur_last_7d: round((tokens7 / 1e6) * CONFIG.llm_eur_per_million_tokens),\n  });\n\n  if (currentSr < CONFIG.success_rate_slo) {\n    anomalies.push({ workflow, type: 'success_rate_breach', detail: `success rate ${round(currentSr * 100, 1)}% vs SLO ${CONFIG.success_rate_slo * 100}% (baseline ${round(baselineSr * 100, 1)}%)` });\n  }\n  if (latencyZ > CONFIG.latency_z_threshold) {\n    anomalies.push({ workflow, type: 'latency_spike', detail: `avg duration ${current.avg_duration_s}s vs baseline ${round(durationMean, 1)}s (z=${round(latencyZ, 1)})` });\n  }\n  if (baselineVolume > 0 && current.items_processed < CONFIG.volume_drop_ratio * baselineVolume) {\n    anomalies.push({ workflow, type: 'volume_drop', detail: `${current.items_processed} items vs baseline ${round(baselineVolume, 1)}` });\n  }\n}\n\nconst totals = {\n  items_last_7d: kpis.reduce((s, k) => s + k.items_last_7d, 0),\n  hours_saved_last_7d: round(kpis.reduce((s, k) => s + k.hours_saved_last_7d, 0), 1),\n  llm_cost_eur_last_7d: round(kpis.reduce((s, k) => s + k.llm_cost_eur_last_7d, 0)),\n};\n\nreturn [{\n  json: {\n    generated_at: new Date().toISOString(),\n    has_anomalies: anomalies.length > 0,\n    anomalies,\n    kpis,\n    totals,\n    // Pre-rendered text for the LLM prompt, so no raw JSON (and no braces) reaches the model.\n    anomalies_text: anomalies.map((a) => `- ${a.workflow}: ${a.type} (${a.detail})`).join('\\n') || '- none',\n    kpi_text: kpis.map((k) => `- ${k.workflow}: ${k.runs} runs, ${k.failures} failed, ${k.avg_duration_s}s avg, ${k.items_last_7d} items / ${k.hours_saved_last_7d} h saved / EUR ${k.llm_cost_eur_last_7d} LLM cost in 7d`).join('\\n'),\n  },\n}];\n"
+      },
+      "id": "bddbc58f-b9d9-564d-ba6c-e95484de21a5",
+      "name": "Compute KPIs & Anomalies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "40f66061-2741-5e2c-8683-1e4582ad4e2a",
+              "leftValue": "={{ $json.has_anomalies }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "193e9310-8ed9-59d6-960a-cb4afd6a350d",
+      "name": "Anomalies Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Daily automation health data.\n\nAnomalies:\n{{ $json.anomalies_text }}\n\nKPIs per workflow:\n{{ $json.kpi_text }}\n\nTotals last 7 days: {{ $json.totals.items_last_7d }} items, {{ $json.totals.hours_saved_last_7d }} hours saved (estimate), EUR {{ $json.totals.llm_cost_eur_last_7d }} LLM cost.",
+        "hasOutputParser": false,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are the operations lead for a team's automation workflows. You write the daily health note for colleagues who are not engineers.\n\nWrite in plain text suitable for a chat message, at most 150 words:\n1. One line with the overall status.\n2. For each anomaly: the workflow, what changed compared with its baseline, one or two likely causes phrased as hypotheses, and the first action to take.\n3. One line with the value delivered in the last 7 days (hours saved and LLM cost), stating that hours saved are an estimate based on assumed manual minutes per item.\n\nUse only the numbers you are given. Do not invent causes as facts. Do not use markdown tables."
+            }
+          ]
+        }
+      },
+      "id": "85ceb397-33b6-5500-9cc5-d4f4da3f0da8",
+      "name": "Write Ops Note",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        -251.99999999999997
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "id": "be9daea3-d875-5259-93ca-6d19f4887512",
+      "name": "OpenAI Model (Write Ops Note)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1104,
+        -53.99999999999997
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#automation-ops",
+          "mode": "name"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "63037c35-19d7-57ac-a1dd-6a64b98f2ca9",
+      "name": "Post Ops Note",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        -251.99999999999997
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// One row per workflow per day for the KPI history sheet (trend charts, monthly reporting).\nconst { generated_at, kpis, anomalies } = $input.first().json;\nreturn kpis.map((k) => ({\n  json: { ...k, generated_at, anomalies: anomalies.filter((a) => a.workflow === k.workflow).map((a) => a.type).join(', ') },\n}));\n"
+      },
+      "id": "f18533a7-ba28-5098-97c3-186eb5e4eb2c",
+      "name": "Flatten KPI Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "kpi_history",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "93c61d22-514c-5718-9aab-87c531001e76",
+      "name": "Append KPI History",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        180
+      ],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "OpenAI Model (Write Ops Note)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Ops Note",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Morning 07:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch n8n Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Demo": {
+      "main": [
+        [
+          {
+            "node": "Fetch n8n Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch n8n Executions": {
+      "main": [
+        [
+          {
+            "node": "Normalize Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Metrics": {
+      "main": [
+        [
+          {
+            "node": "Compute KPIs & Anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute KPIs & Anomalies": {
+      "main": [
+        [
+          {
+            "node": "Anomalies Found?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Flatten KPI Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anomalies Found?": {
+      "main": [
+        [
+          {
+            "node": "Write Ops Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Ops Note": {
+      "main": [
+        [
+          {
+            "node": "Post Ops Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten KPI Rows": {
+      "main": [
+        [
+          {
+            "node": "Append KPI History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "performance"
+    },
+    {
+      "name": "monitoring"
+    },
+    {
+      "name": "roi"
+    }
+  ]
+}
